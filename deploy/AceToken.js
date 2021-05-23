@@ -3,12 +3,12 @@
 
   const { deployer } = await getNamedAccounts()
 
-  await deploy("SushiToken", {
+  await deploy("AceToken", {
     from: deployer,
     log: true,
     deterministicDeployment: false
   })
 }
 
-module.exports.tags = ["SushiToken"]
+module.exports.tags = ["AceToken"]
 module.exports.dependencies = ["UniswapV2Factory", "UniswapV2Router02"]

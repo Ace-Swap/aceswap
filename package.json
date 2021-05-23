@@ -1,9 +1,9 @@
 {
-  "name": "@sushiswap/core",
+  "name": "@aceswap/core",
   "version": "1.4.2",
   "license": "MIT",
   "types": "./types/index.ts",
-  "description": "Core contracts for the SushiSwap protocol",
+  "description": "Core contracts for the AceSwap protocol",
   "files": [
     "abi",
     "artifacts",
@@ -15,15 +15,16 @@
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sushiswap/sushiswap.git"
+    "url": "git+https://github.com/Ace-Swap/aceswap.git"
   },
   "bugs": {
-    "url": "https://github.com/sushiswap/sushiswap/issues"
+    "url": "https://github.com/Ace-Swap/aceswap/issues"
   },
-  "homepage": "https://github.com/sushiswap/sushiswap#readme",
+  "homepage": "https://github.com/Ace-Swap/aceswap#readme",
   "keywords": [
-    "sushiswap",
-    "ethereum"
+    "aceswap",
+    "ethereum",
+    "matic"
   ],
   "scripts": {
     "build": "hardhat compile",

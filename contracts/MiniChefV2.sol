@@ -16,8 +16,8 @@ interface IMigratorChef {
     function migrate(IERC20 token) external returns (IERC20);
 }
 
-/// @notice The (older) MasterChef contract gives out a constant number of SUSHI tokens per block.
-/// It is the only address with minting rights for SUSHI.
+/// @notice The (older) MasterChef contract gives out a constant number of ACE tokens per block.
+/// It is the only address with minting rights for ACE.
 /// The idea for this MasterChef V2 (MCV2) contract is therefore to be the owner of a dummy token
 /// that is deposited into the MasterChef V1 (MCV1) contract.
 /// The allocation point for this pool on MCV1 is the total allocation point for all pools that receive double incentives.
@@ -29,7 +29,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
 
     /// @notice Info of each MCV2 user.
     /// `amount` LP token amount the user has provided.
-    /// `rewardDebt` The amount of SUSHI entitled to the user.
+    /// `rewardDebt` The amount of ACE entitled to the user.
     struct UserInfo {
         uint256 amount;
         int256 rewardDebt;
@@ -37,15 +37,15 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
 
     /// @notice Info of each MCV2 pool.
     /// `allocPoint` The amount of allocation points assigned to the pool.
-    /// Also known as the amount of SUSHI to distribute per block.
+    /// Also known as the amount of ACE to distribute per block.
     struct PoolInfo {
-        uint128 accSushiPerShare;
+        uint128 accAcePerShare;
         uint64 lastRewardTime;
         uint64 allocPoint;
     }
 
-    /// @notice Address of SUSHI contract.
-    IERC20 public immutable SUSHI;
+    /// @notice Address of ACE contract.
+    IERC20 public immutable ACE;
     // @notice The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
 
@@ -61,8 +61,8 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     /// @dev Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint;
 
-    uint256 public sushiPerSecond;
-    uint256 private constant ACC_SUSHI_PRECISION = 1e12;
+    uint256 public acePerSecond;
+    uint256 private constant ACC_ACE_PRECISION = 1e12;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
@@ -70,12 +70,12 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     event Harvest(address indexed user, uint256 indexed pid, uint256 amount);
     event LogPoolAddition(uint256 indexed pid, uint256 allocPoint, IERC20 indexed lpToken, IRewarder indexed rewarder);
     event LogSetPool(uint256 indexed pid, uint256 allocPoint, IRewarder indexed rewarder, bool overwrite);
-    event LogUpdatePool(uint256 indexed pid, uint64 lastRewardTime, uint256 lpSupply, uint256 accSushiPerShare);
-    event LogSushiPerSecond(uint256 sushiPerSecond);
+    event LogUpdatePool(uint256 indexed pid, uint64 lastRewardTime, uint256 lpSupply, uint256 accAcePerShare);
+    event LogAcePerSecond(uint256 acePerSecond);
 
-    /// @param _sushi The SUSHI token contract address.
-    constructor(IERC20 _sushi) public {
-        SUSHI = _sushi;
+    /// @param _ace The ACE token contract address.
+    constructor(IERC20 _ace) public {
+        ACE = _ace;
     }
 
     /// @notice Returns the number of MCV2 pools.
@@ -96,12 +96,12 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         poolInfo.push(PoolInfo({
             allocPoint: allocPoint.to64(),
             lastRewardTime: block.timestamp.to64(),
-            accSushiPerShare: 0
+            accAcePerShare: 0
         }));
         emit LogPoolAddition(lpToken.length.sub(1), allocPoint, _lpToken, _rewarder);
     }
 
-    /// @notice Update the given pool's SUSHI allocation point and `IRewarder` contract. Can only be called by the owner.
+    /// @notice Update the given pool's ACE allocation point and `IRewarder` contract. Can only be called by the owner.
     /// @param _pid The index of the pool. See `poolInfo`.
     /// @param _allocPoint New AP of the pool.
     /// @param _rewarder Address of the rewarder delegate.
@@ -113,11 +113,11 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         emit LogSetPool(_pid, _allocPoint, overwrite ? _rewarder : rewarder[_pid], overwrite);
     }
 
-    /// @notice Sets the sushi per second to be distributed. Can only be called by the owner.
-    /// @param _sushiPerSecond The amount of Sushi to be distributed per second.
-    function setSushiPerSecond(uint256 _sushiPerSecond) public onlyOwner {
-        sushiPerSecond = _sushiPerSecond;
-        emit LogSushiPerSecond(_sushiPerSecond);
+    /// @notice Sets the ace per second to be distributed. Can only be called by the owner.
+    /// @param _acePerSecond The amount of Ace to be distributed per second.
+    function setAcePerSecond(uint256 _acePerSecond) public onlyOwner {
+        acePerSecond = _acePerSecond;
+        emit LogAcePerSecond(_acePerSecond);
     }
 
     /// @notice Set the `migrator` contract. Can only be called by the owner.
@@ -138,21 +138,21 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         lpToken[_pid] = newLpToken;
     }
 
-    /// @notice View function to see pending SUSHI on frontend.
+    /// @notice View function to see pending ACE on frontend.
     /// @param _pid The index of the pool. See `poolInfo`.
     /// @param _user Address of user.
-    /// @return pending SUSHI reward for a given user.
-    function pendingSushi(uint256 _pid, address _user) external view returns (uint256 pending) {
+    /// @return pending ACE reward for a given user.
+    function pendingAce(uint256 _pid, address _user) external view returns (uint256 pending) {
         PoolInfo memory pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accSushiPerShare = pool.accSushiPerShare;
+        uint256 accAcePerShare = pool.accAcePerShare;
         uint256 lpSupply = lpToken[_pid].balanceOf(address(this));
         if (block.timestamp > pool.lastRewardTime && lpSupply != 0) {
             uint256 time = block.timestamp.sub(pool.lastRewardTime);
-            uint256 sushiReward = time.mul(sushiPerSecond).mul(pool.allocPoint) / totalAllocPoint;
-            accSushiPerShare = accSushiPerShare.add(sushiReward.mul(ACC_SUSHI_PRECISION) / lpSupply);
+            uint256 aceReward = time.mul(acePerSecond).mul(pool.allocPoint) / totalAllocPoint;
+            accAcePerShare = accAcePerShare.add(aceReward.mul(ACC_ACE_PRECISION) / lpSupply);
         }
-        pending = int256(user.amount.mul(accSushiPerShare) / ACC_SUSHI_PRECISION).sub(user.rewardDebt).toUInt256();
+        pending = int256(user.amount.mul(accAcePerShare) / ACC_ACE_PRECISION).sub(user.rewardDebt).toUInt256();
     }
 
     /// @notice Update reward variables for all pools. Be careful of gas spending!
@@ -173,16 +173,16 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
             uint256 lpSupply = lpToken[pid].balanceOf(address(this));
             if (lpSupply > 0) {
                 uint256 time = block.timestamp.sub(pool.lastRewardTime);
-                uint256 sushiReward = time.mul(sushiPerSecond).mul(pool.allocPoint) / totalAllocPoint;
-                pool.accSushiPerShare = pool.accSushiPerShare.add((sushiReward.mul(ACC_SUSHI_PRECISION) / lpSupply).to128());
+                uint256 aceReward = time.mul(acePerSecond).mul(pool.allocPoint) / totalAllocPoint;
+                pool.accAcePerShare = pool.accAcePerShare.add((aceReward.mul(ACC_ACE_PRECISION) / lpSupply).to128());
             }
             pool.lastRewardTime = block.timestamp.to64();
             poolInfo[pid] = pool;
-            emit LogUpdatePool(pid, pool.lastRewardTime, lpSupply, pool.accSushiPerShare);
+            emit LogUpdatePool(pid, pool.lastRewardTime, lpSupply, pool.accAcePerShare);
         }
     }
 
-    /// @notice Deposit LP tokens to MCV2 for SUSHI allocation.
+    /// @notice Deposit LP tokens to MCV2 for ACE allocation.
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param amount LP token amount to deposit.
     /// @param to The receiver of `amount` deposit benefit.
@@ -192,12 +192,12 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
 
         // Effects
         user.amount = user.amount.add(amount);
-        user.rewardDebt = user.rewardDebt.add(int256(amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION));
+        user.rewardDebt = user.rewardDebt.add(int256(amount.mul(pool.accAcePerShare) / ACC_ACE_PRECISION));
 
         // Interactions
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
-            _rewarder.onSushiReward(pid, to, to, 0, user.amount);
+            _rewarder.onAceReward(pid, to, to, 0, user.amount);
         }
 
         lpToken[pid].safeTransferFrom(msg.sender, address(this), amount);
@@ -214,13 +214,13 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         UserInfo storage user = userInfo[pid][msg.sender];
 
         // Effects
-        user.rewardDebt = user.rewardDebt.sub(int256(amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION));
+        user.rewardDebt = user.rewardDebt.sub(int256(amount.mul(pool.accAcePerShare) / ACC_ACE_PRECISION));
         user.amount = user.amount.sub(amount);
 
         // Interactions
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
-            _rewarder.onSushiReward(pid, msg.sender, to, 0, user.amount);
+            _rewarder.onAceReward(pid, msg.sender, to, 0, user.amount);
         }
         
         lpToken[pid].safeTransfer(to, amount);
@@ -230,55 +230,55 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
 
     /// @notice Harvest proceeds for transaction sender to `to`.
     /// @param pid The index of the pool. See `poolInfo`.
-    /// @param to Receiver of SUSHI rewards.
+    /// @param to Receiver of ACE rewards.
     function harvest(uint256 pid, address to) public {
         PoolInfo memory pool = updatePool(pid);
         UserInfo storage user = userInfo[pid][msg.sender];
-        int256 accumulatedSushi = int256(user.amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION);
-        uint256 _pendingSushi = accumulatedSushi.sub(user.rewardDebt).toUInt256();
+        int256 accumulatedAce = int256(user.amount.mul(pool.accAcePerShare) / ACC_ACE_PRECISION);
+        uint256 _pendingAce = accumulatedAce.sub(user.rewardDebt).toUInt256();
 
         // Effects
-        user.rewardDebt = accumulatedSushi;
+        user.rewardDebt = accumulatedAce;
 
         // Interactions
-        if (_pendingSushi != 0) {
-            SUSHI.safeTransfer(to, _pendingSushi);
+        if (_pendingAce != 0) {
+            ACE.safeTransfer(to, _pendingAce);
         }
         
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
-            _rewarder.onSushiReward( pid, msg.sender, to, _pendingSushi, user.amount);
+            _rewarder.onAceReward( pid, msg.sender, to, _pendingAce, user.amount);
         }
 
-        emit Harvest(msg.sender, pid, _pendingSushi);
+        emit Harvest(msg.sender, pid, _pendingAce);
     }
     
     /// @notice Withdraw LP tokens from MCV2 and harvest proceeds for transaction sender to `to`.
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param amount LP token amount to withdraw.
-    /// @param to Receiver of the LP tokens and SUSHI rewards.
+    /// @param to Receiver of the LP tokens and ACE rewards.
     function withdrawAndHarvest(uint256 pid, uint256 amount, address to) public {
         PoolInfo memory pool = updatePool(pid);
         UserInfo storage user = userInfo[pid][msg.sender];
-        int256 accumulatedSushi = int256(user.amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION);
-        uint256 _pendingSushi = accumulatedSushi.sub(user.rewardDebt).toUInt256();
+        int256 accumulatedAce = int256(user.amount.mul(pool.accAcePerShare) / ACC_ACE_PRECISION);
+        uint256 _pendingAce = accumulatedAce.sub(user.rewardDebt).toUInt256();
 
         // Effects
-        user.rewardDebt = accumulatedSushi.sub(int256(amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION));
+        user.rewardDebt = accumulatedAce.sub(int256(amount.mul(pool.accAcePerShare) / ACC_ACE_PRECISION));
         user.amount = user.amount.sub(amount);
         
         // Interactions
-        SUSHI.safeTransfer(to, _pendingSushi);
+        ACE.safeTransfer(to, _pendingAce);
 
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
-            _rewarder.onSushiReward(pid, msg.sender, to, _pendingSushi, user.amount);
+            _rewarder.onAceReward(pid, msg.sender, to, _pendingAce, user.amount);
         }
 
         lpToken[pid].safeTransfer(to, amount);
 
         emit Withdraw(msg.sender, pid, amount, to);
-        emit Harvest(msg.sender, pid, _pendingSushi);
+        emit Harvest(msg.sender, pid, _pendingAce);
     }
 
     /// @notice Withdraw without caring about rewards. EMERGENCY ONLY.
@@ -292,7 +292,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
 
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
-            _rewarder.onSushiReward(pid, msg.sender, to, 0, 0);
+            _rewarder.onAceReward(pid, msg.sender, to, 0, 0);
         }
 
         // Note: transfer can fail or succeed if `amount` is zero.
