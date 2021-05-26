@@ -2,7 +2,8 @@ const { ChainId } = require("@sushiswap/sdk")
 
 
 const ACE = {
-  [ChainId.MATIC]: '0x0b3F868E0BE5597D5DB7fEB59E1CADBb0fdDa50a'
+  [ChainId.MATIC]: '0x0b3F868E0BE5597D5DB7fEB59E1CADBb0fdDa50a',
+  80001: '0x4654bb73BAfbFb8A3952f1c65D1310e0e57d6101'
 }
 
 module.exports = async function ({ ethers, deployments, getNamedAccounts }) {
