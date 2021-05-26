@@ -1,6 +1,6 @@
 {
   "name": "@aceswap/core",
-  "version": "1.4.2",
+  "version": "1.0.0",
   "license": "MIT",
   "types": "./types/index.ts",
   "description": "Core contracts for the AceSwap protocol",
