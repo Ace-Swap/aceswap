@@ -19,16 +19,16 @@ interface IBentoBoxWithdraw {
     ) external returns (uint256 amountOut, uint256 shareOut);
 }
 
-interface IKashiWithdrawFee {
+interface ILendingWithdrawFee {
     function asset() external view returns (address);
     function balanceOf(address account) external view returns (uint256);
     function withdrawFees() external;
     function removeAsset(address to, uint256 fraction) external returns (uint256 share);
 }
 
-// SushiMakerKashi is MasterChef's left hand and kinda a wizard. He can cook up Sushi from pretty much anything!
-// This contract handles "serving up" rewards for xSushi holders by trading tokens collected from Kashi fees for Sushi.
-contract SushiMakerKashi is Ownable {
+// AceMakerLending is MasterChef's left hand and kinda a wizard. He can cook up Ace from pretty much anything!
+// This contract handles "serving up" rewards for xAce holders by trading tokens collected from Lending fees for Ace.
+contract AceMakerLending is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -38,7 +38,7 @@ contract SushiMakerKashi is Ownable {
     //0x8798249c2E607446EfB7Ad49eC89dD1865Ff4272
     IBentoBoxWithdraw private immutable bentoBox;
     //0xF5BCE5077908a1b7370B9ae04AdC565EBd643966 
-    address private immutable sushi;
+    address private immutable ace;
     //0x6B3595068778DD592e39A122f4f5a5cF09C90fE2
     address private immutable weth;
     //0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
@@ -53,21 +53,21 @@ contract SushiMakerKashi is Ownable {
         address indexed token0,
         uint256 amount0,
         uint256 amountBENTO,
-        uint256 amountSUSHI
+        uint256 amountACE
     );
 
     constructor(
         IUniswapV2Factory _factory,
         address _bar,
         IBentoBoxWithdraw _bentoBox,
-        address _sushi,
+        address _ace,
         address _weth,
         bytes32 _pairCodeHash
     ) public {
         factory = _factory;
         bar = _bar;
         bentoBox = _bentoBox;
-        sushi = _sushi;
+        ace = _ace;
         weth = _weth;
         pairCodeHash = _pairCodeHash;
     }
@@ -75,7 +75,7 @@ contract SushiMakerKashi is Ownable {
     function setBridge(address token, address bridge) external onlyOwner {
         // Checks
         require(
-            token != sushi && token != weth && token != bridge,
+            token != ace && token != weth && token != bridge,
             "Maker: Invalid bridge"
         );
         // Effects
@@ -89,25 +89,25 @@ contract SushiMakerKashi is Ownable {
         _;
     }
 
-    function convert(IKashiWithdrawFee kashiPair) external onlyEOA {
-        _convert(kashiPair);
+    function convert(ILendingWithdrawFee lendingPair) external onlyEOA {
+        _convert(lendingPair);
     }
 
-    function convertMultiple(IKashiWithdrawFee[] calldata kashiPair) external onlyEOA {
-        for (uint256 i = 0; i < kashiPair.length; i++) {
-            _convert(kashiPair[i]);
+    function convertMultiple(ILendingWithdrawFee[] calldata lendingPair) external onlyEOA {
+        for (uint256 i = 0; i < lendingPair.length; i++) {
+            _convert(lendingPair[i]);
         }
     }
 
-    function _convert(IKashiWithdrawFee kashiPair) private {
+    function _convert(ILendingWithdrawFee lendingPair) private {
         // update Kashi fees for this Maker contract (`feeTo`)
-        kashiPair.withdrawFees();
+        lendingPair.withdrawFees();
 
         // convert updated Kashi balance to Bento shares
-        uint256 bentoShares = kashiPair.removeAsset(address(this), kashiPair.balanceOf(address(this)));
+        uint256 bentoShares = lendingPair.removeAsset(address(this), lendingPair.balanceOf(address(this)));
 
         // convert Bento shares to underlying Kashi asset (`token0`) balance (`amount0`) for Maker
-        address token0 = kashiPair.asset();
+        address token0 = lendingPair.asset();
         (uint256 amount0, ) = bentoBox.withdraw(IERC20(token0), address(this), address(this), 0, bentoShares);
 
         emit LogConvert(
@@ -119,19 +119,19 @@ contract SushiMakerKashi is Ownable {
         );
     }
 
-    function _convertStep(address token0, uint256 amount0) private returns (uint256 sushiOut) {
-        if (token0 == sushi) {
+    function _convertStep(address token0, uint256 amount0) private returns (uint256 aceOut) {
+        if (token0 == ace) {
             IERC20(token0).safeTransfer(bar, amount0);
-            sushiOut = amount0;
+            aceOut = amount0;
         } else if (token0 == weth) {
-            sushiOut = _swap(token0, sushi, amount0, bar);
+            aceOut = _swap(token0, ace, amount0, bar);
         } else {
             address bridge = _bridges[token0];
             if (bridge == address(0)) {
                 bridge = weth;
             }
             uint256 amountOut = _swap(token0, bridge, amount0, address(this));
-            sushiOut = _convertStep(bridge, amountOut);
+            aceOut = _convertStep(bridge, amountOut);
         }
     }
 
