@@ -4,6 +4,7 @@ build/
 cache/
 coverage/
 exports/
+single-contracts/
 node_modules/
 types/
 package-lock.json

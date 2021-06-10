@@ -3,7 +3,8 @@ const { WETH } = require("@sushiswap/sdk")
 module.exports = async function ({ ethers: { getNamedSigner }, getNamedAccounts, deployments }) {
   const { deploy } = deployments
 
-  const { deployer, dev } = await getNamedAccounts()
+  const { deployer } = await getNamedAccounts()
+  const dev = "0x23b065914DC4D8ab052a648a9463546F820BE02f"
 
   const chainId = await getChainId()
 

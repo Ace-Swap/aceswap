@@ -39,6 +39,9 @@
     "rinkeby:deploy": "hardhat --network rinkeby deploy",
     "rinkeby:verify": "hardhat --network rinkeby etherscan-verify --solc-input",
     "rinkeby:export": "hardhat --network rinkeby export --export exports/rinkeby.json",
+    "matic:deploy": "hardhat --network matic deploy",
+    "matic:verify": "hardhat --network matic etherscan-verify --solc-input",
+    "matic:export": "hardhat --network matic export --export exports/matic.json",
     "mumbai:deploy": "hardhat --network mumbai deploy",
     "mumbai:verify": "hardhat --network mumbai etherscan-verify --solc-input",
     "mumbai:export": "hardhat --network mumbai export --export exports/mumbai.json",
@@ -94,5 +97,8 @@
     "ts-node": "^9.1.1",
     "typechain": "^4.0.2",
     "typescript": "^4.2.2"
+  },
+  "dependencies": {
+    "truffle-flattener": "^1.5.0"
   }
 }

@@ -3,11 +3,11 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   const { deployer } = await getNamedAccounts()
 
-  const sushi = await deployments.get("AceToken")
+  const ace = await deployments.get("AceToken")
 
   await deploy("AceBar", {
     from: deployer,
-    args: [sushi.address],
+    args: [ace.address],
     log: true,
     deterministicDeployment: false
   })
